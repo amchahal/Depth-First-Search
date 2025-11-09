@@ -6,8 +6,8 @@
 // You can modify main function to test your own test cases.
 
     	LDA X0, maze      //Init maze array
-    	//LDA X1, visit     //Init visit array
-    	//LDA X2, path      //Init path array
+    	LDA X1, visit     //Init visit array
+    	LDA X2, path      //Init path array
 
 	LDA X1, path
 	ADDI X2, XZR, #3 //set width to 3
@@ -160,7 +160,7 @@ dispend:
 ////////////////////////
 check:
 	// input:
-    	// 	X0: The address of (pointer to) the maze array.
+    // 	X0: The address of (pointer to) the maze array.
   	//	X1: The address of (pointer to) the visit array.
 	//	X2: Location that we are checking.
 	//	X3: The address of (pointer to) the path array.
@@ -237,15 +237,15 @@ dfs:
 	LDUR X0, [FP, #-8]
 	LDUR X1, [FP, #-16]
 	ADDI X7, X7, #1 // add 1 to X7
-	LSL X7, #3 // X7*8
-	ADD X12, X7, X1
-	SUBI X13, XZR, #1 // constant -1
-	STUR X13, [X12, #0] // store -1 in *(visit+find(visit, -1)+1)
-	STUR X3, [X12, #-8] // store loc in *(visit+find(visit, -1))
-	LSL X12, X3, #3 // loc*8
-	ADDI X13, X0, X12 
-	LDUR X13, [X13, #0] // load *(maze+loc)
-	CMPI X13, #1 // check if equal to 1
+	LSL X7, , X7, #3 // X7*8
+	ADD X7, X7, X1
+	SUBI X12, XZR, #1 // constant -1
+	STUR X12, [X7, #0] // store -1 in *(visit+find(visit, -1)+1)
+	STUR X3, [X7, #-8] // store loc in *(visit+find(visit, -1))
+	LSL X7, X3, #3 // loc*8
+	ADD X7, X0, X7 
+	LDUR X12, [X7, #0] // load *(maze+loc)
+	CMPI X12, #1 // check if equal to 1
 	B.EQ rzdfs
 
 	MOV X0, X2 // store path in X0
@@ -254,55 +254,89 @@ dfs:
 	LDUR X0, [FP, #-8]
 	LDUR X1, [FP, #-16]
 	ADDI X7, X7, #1 // add 1 to X7
-	LSL X7, #3 // X7*8
-	ADD X12, X7, X2
-	SUBI X14, XZR, #1 // constant -1
-	STUR X14, [X12, #0] // store -1 in *(path+find(path, -1)+1)
-	STUR X3, [X12, #-8] // store loc in *(path+find(path, -1))
+	LSL X7, X7, #3 // X7*8
+	ADD X7, X7, X2
+	SUBI X13, XZR, #1 // constant -1
+	STUR X13, [X7, #0] // store -1 in *(path+find(path, -1)+1)
+	STUR X3, [X7, #-8] // store loc in *(path+find(path, -1))
 	
-	CMPI X13, #2 // check if equal to 2
+	CMPI X12, #2 // check if *(maze+loc) equal to 2
 	B.EQ r1dfs
 	
 	ADDI X12, XZR, #0 // possible = 0
 
-	DIV X13, X3, X4 // loc / width
+	UDIV X13, X3, X4 // loc / width
 	MUL X14, X13, X4 
-	SUB X14, X3, X14 // X14 stores mod value
+	SUB X14, X3, X14 // X14 stores remainder value
 
-	CMPI X12, #0 // check if possible = 0 (true)
-	B.NE if2
-	CMPI X13, #0 // check if loc/width = 0 (false)
-	B.NE if1
+	CMPI X13, #0 // check if loc/width = 0 (if equal skip to next if)
+	B.EQ if1
 	
-	SUB X2, X3, X4 // loc - width
+	SUB X15, X3, X4 // temp register = loc - width
+	MOV X3, X2 // X3 holds path
+	ADDI X2, X15, #0 // X2 = loc - width
 	BL check
-	LDUR X2, [FP, #-24] // load loc back to X2
+	LDUR X2, [FP, #-24] // load path back to X2
+	LDUR X3, [FP, #-32] // load loc back to X3
 	ADD X12, X7, XZR // possible = X7
 	
 if1:	
 	CMPI X12, #0 // check if possible = 0 (true)
 	B.NE if2
-	CMPI X14, #0 // check if loc%width = 0 (false)
-	B.NE if2
+	CMPI X14, #0 // check if loc%width = 0 (if equal skip to next if)
+	B.EQ if2
 
-	SUBI X2, X3, #1 // loc - 1
+	SUBI X15, X3, #1 // temp register = loc - 1
+	MOV X3, X2 // X3 holds path
+	ADDI X2, X15, #0 // X2 = loc - 1
 	BL check
-	LDUR X2, [FP, #-24] // load loc back to X2
+	LDUR X2, [FP, #-24] // load path back to X2
+	LDUR X3, [FP, #-32] // load loc back to X3
 	ADD X12, X7, XZR // possible = X7
 
-if2:
 	SUBI X15, X4, #1 // width - 1
-	
-// third if statement
-	
 
+if2:
+	CMPI X12, #0 // check if possible = 0 (true)
+	B.NE if3
+	CMP X13, X15 // check if loc/width = width-1 (if equal skip to next if)
+	B.EQ if3
 
-	
-	
-	
+	ADD X16, X3, X4 // temp register = loc + width
+	MOV X3, X2 // X3 holds path
+	ADDI X2, X16, #0 // X2 = loc + width
+	BL check
+	LDUR X2, [FP, #-24] // load path back to X2
+	LDUR X3, [FP, #-32] // load loc back to X3
+	ADD X12, X7, XZR // possible = X7
 
- 
-	
+if3:
+	CMPI X12, #0 // check if possible = 0 (true)
+	B.NE lastif
+	CMP X14, X15 // check if loc%width = width-1 (if equal skip to next if)
+
+	ADDI X15, X3, #1 // temp register = loc + 1
+	MOV X3, X2 // X3 holds path
+	ADDI X2, X15, #0 // X2 = loc + 1
+	BL check
+	LDUR X2, [FP, #-24] // load path back to X2
+	LDUR X3, [FP, #-32] // load loc back to X3
+	ADD X12, X7, XZR // possible = X7
+
+lastif:
+	CMPI X12, #0 // check if possible = 0 (true)
+	B.NE r1dfs // branch to return 0
+
+	MOV X0, X2 // store path in X0
+	SUBI X1, XZR, #1 // set X1 to -1
+	BL find
+	LDUR X0, [FP, #-8]
+	LDUR X1, [FP, #-16]
+	ADDI X7, X7, #1 // add 1 to X7
+	LSL X7, X7, #3 // X7*8
+	ADD X7, X7, X2
+	SUBI X13, XZR, #1 // constant -1
+	STUR X13, [X7, #0] // store -1 in *(path+find(path, -1)+1)
 
 rzdfs:
 	ADDI X7, XZR, #0 // return 0
@@ -310,8 +344,15 @@ rzdfs:
 
 r1dfs:
 	ADDI X7, XZR, #1 // return 1
-	B deallocatedfs
 
+deallocatedfs:
+	LDUR X3, [FP, #-32] 
+	LDUR X2, [FP, #-24]
+	LDUR X1, [FP, #-16]
+	LDUR X0, [FP, #-8]
+	LDUR LR, [FP, #0]
+	LDUR FP, [SP, #0]
+	ADDI SP, SP, #40
 	BR LR
 
 
