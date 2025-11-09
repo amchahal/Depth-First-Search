@@ -5,14 +5,15 @@
 ////////////////////////
 // You can modify main function to test your own test cases.
 
-    	LDA X0, maze      //Init maze array
-    	LDA X1, visit     //Init visit array
-    	LDA X2, path      //Init path array
+    LDA X0, maze      //Init maze array
+    LDA X1, visit     //Init visit array
+    LDA X2, path      //Init path array
 
-	LDA X1, path
-	ADDI X2, XZR, #3 //set width to 3
-	BL display
+	ADDI X3, XZR, #1 // loc = 1
+	ADDI X4, XZR, #5 // width = 5
+	BL dfs
 	STOP
+
 
 
     	ADD X3, XZR, XZR  //Init start indeX
@@ -44,8 +45,8 @@ find:
 	
 loop:	
 	LDUR X10, [X0, #0] // load *arr+i
-	ADDI XZR, X10, #1 // check if *(arr+i) == -1
-	CBZ X10, retfind1
+	ADDIS XZR, X10, #1 // check if *(arr+i) == -1
+	B.EQ retfind1
 	CMP X10, X1 // check if *(arr+1) == loc
 	B.EQ retfind2
 	ADDI X9, X9, #1 // i++
@@ -190,8 +191,8 @@ checkloop:
 
 endcheck:
 	ADD X11, X2, XZR // temp register to store X2
-	MOV X2, X3 // move X3 to X2
-	MOV X3, X11 // move X2 to X3
+	MOV X2, X3 // move X3 to X2 (X2 = path)
+	MOV X3, X11 // move X2 to X3 (X3 = loc)
 	LDUR X1, [FP, #-8] // load initial X1 value
 	BL dfs
 	B deallocatecheck
@@ -237,7 +238,7 @@ dfs:
 	LDUR X0, [FP, #-8]
 	LDUR X1, [FP, #-16]
 	ADDI X7, X7, #1 // add 1 to X7
-	LSL X7, , X7, #3 // X7*8
+	LSL X7, X7, #3 // X7*8
 	ADD X7, X7, X1
 	SUBI X12, XZR, #1 // constant -1
 	STUR X12, [X7, #0] // store -1 in *(visit+find(visit, -1)+1)
@@ -314,6 +315,7 @@ if3:
 	CMPI X12, #0 // check if possible = 0 (true)
 	B.NE lastif
 	CMP X14, X15 // check if loc%width = width-1 (if equal skip to next if)
+	B.EQ lastif
 
 	ADDI X15, X3, #1 // temp register = loc + 1
 	MOV X3, X2 // X3 holds path
@@ -352,7 +354,7 @@ deallocatedfs:
 	LDUR X0, [FP, #-8]
 	LDUR LR, [FP, #0]
 	LDUR FP, [SP, #0]
-	ADDI SP, SP, #40
+	ADDI SP, SP, #48
 	BR LR
 
 
