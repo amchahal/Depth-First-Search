@@ -179,7 +179,7 @@ check:
 checkloop:
 	LDUR X10, [X1, #0] // load *(visit)
 	ADDIS X11, X10, #1 // check if value is = -1
-	B.NE endcheck
+	B.EQ endcheck
 
 	CMP X11, X2 // check if *(visit + i) == loc
 	B.EQ endzero
