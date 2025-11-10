@@ -7,12 +7,13 @@
 
     LDA X0, maze      //Init maze array
     LDA X1, visit     //Init visit array
-    LDA X2, path      //Init path array
+    LDA X3, path      //Init path array
 
-	ADDI X3, XZR, #1 // loc = 1
-	ADDI X4, XZR, #5 // width = 5
-	BL dfs
+	ADDI X2, XZR, #4 // loc = 4
+	ADDI X4, XZR, #3 // width = 3
+	BL check
 	STOP
+
 
 
 
@@ -70,10 +71,10 @@ endfind:
 
 ////////////////////////
 //                    //
-//       Display      //
+//       display      //
 //                    //
 ////////////////////////
-Display:
+display:
 	// input:
 	//	X0: The pointer of the maze array.
   	//	X1: The pointer of the path array.
@@ -128,7 +129,8 @@ miniloop:
 	ADDI X10, X10, #1 // j++
 	B miniloop
 	
-next: 	ADDI X13, XZR, #3 
+next: 	
+	ADDI X13, XZR, #3 
 	putint X13 // print 3
 	putchar X15 // print space
 	ADDI X10, X10, #1
@@ -142,8 +144,8 @@ miniend:
 
 dispend: 
 	putchar X14
-	LDUR X9, [FP, #-32] // store value of i
 	LDUR X10, [FP, #-40] // store value of j
+	LDUR X9, [FP, #-32] // store value of i
 	LDUR X2, [FP, #-24]
 	LDUR X1, [FP, #-16]
 	LDUR X0, [FP, #-8]
@@ -182,7 +184,7 @@ checkloop:
 	ADDIS X11, X10, #1 // check if value is = -1
 	B.EQ endcheck
 
-	CMP X11, X2 // check if *(visit + i) == loc
+	CMP X10, X2 // check if *(visit + i) == loc
 	B.EQ endzero
 
 	ADDI X9, X9, #1 // i++
@@ -199,7 +201,6 @@ endcheck:
 	
 endzero:
 	ADDI X7, XZR, #0 // set X7 to 0
-	B deallocatecheck
 
 deallocatecheck:
 	LDUR X1, [FP, #-8]
@@ -232,50 +233,49 @@ dfs:
 	STUR X2, [FP, #-24] // store X2
 	STUR X3, [FP, #-32] // store X3
 	
-	MOV X0, X1 // set X0 to visit
+	ADD X0, X1, XZR // set X0 to visit
 	SUBI X1, XZR, #1 // set X1 to -1
 	BL find
 	LDUR X0, [FP, #-8]
 	LDUR X1, [FP, #-16]
-	ADDI X7, X7, #1 // add 1 to X7
 	LSL X7, X7, #3 // X7*8
 	ADD X7, X7, X1
 	SUBI X12, XZR, #1 // constant -1
-	STUR X12, [X7, #0] // store -1 in *(visit+find(visit, -1)+1)
-	STUR X3, [X7, #-8] // store loc in *(visit+find(visit, -1))
+	STUR X12, [X7, #8] // store -1 in *(visit+find(visit, -1)+1)
+	STUR X3, [X7, #0] // store loc in *(visit+find(visit, -1))
 	LSL X7, X3, #3 // loc*8
 	ADD X7, X0, X7 
 	LDUR X12, [X7, #0] // load *(maze+loc)
 	CMPI X12, #1 // check if equal to 1
 	B.EQ rzdfs
 
-	MOV X0, X2 // store path in X0
+	CMPI X12, #2 // check if *(maze+loc) equal to 2
+	B.EQ r1dfs
+
+	ADD X0, X2, XZR // store path in X0
 	SUBI X1, XZR, #1 // set X1 to -1
 	BL find
 	LDUR X0, [FP, #-8]
 	LDUR X1, [FP, #-16]
-	ADDI X7, X7, #1 // add 1 to X7
 	LSL X7, X7, #3 // X7*8
 	ADD X7, X7, X2
 	SUBI X13, XZR, #1 // constant -1
-	STUR X13, [X7, #0] // store -1 in *(path+find(path, -1)+1)
-	STUR X3, [X7, #-8] // store loc in *(path+find(path, -1))
-	
-	CMPI X12, #2 // check if *(maze+loc) equal to 2
-	B.EQ r1dfs
+	STUR X13, [X7, #8] // store -1 in *(path+find(path, -1)+1)
+	STUR X3, [X7, #0] // store loc in *(path+find(path, -1))
 	
 	ADDI X12, XZR, #0 // possible = 0
 
 	UDIV X13, X3, X4 // loc / width
 	MUL X14, X13, X4 
 	SUB X14, X3, X14 // X14 stores remainder value
+	SUBI X15, X4, #1 // width - 1
 
 	CMPI X13, #0 // check if loc/width = 0 (if equal skip to next if)
 	B.EQ if1
 	
-	SUB X15, X3, X4 // temp register = loc - width
-	MOV X3, X2 // X3 holds path
-	ADDI X2, X15, #0 // X2 = loc - width
+	ADDI X16, X3, #0 // temp register to hold loc
+	ADD X3, X2, XZR // X3 holds path
+	SUB X2, X16, X4 // X2 = loc - width
 	BL check
 	LDUR X2, [FP, #-24] // load path back to X2
 	LDUR X3, [FP, #-32] // load loc back to X3
@@ -287,15 +287,13 @@ if1:
 	CMPI X14, #0 // check if loc%width = 0 (if equal skip to next if)
 	B.EQ if2
 
-	SUBI X15, X3, #1 // temp register = loc - 1
-	MOV X3, X2 // X3 holds path
-	ADDI X2, X15, #0 // X2 = loc - 1
+	SUBI X16, X3, #1 // temp register to hold loc - 1
+	ADD X3, X2, XZR // X3 holds path
+	ADDI X2, X16, #0 // X2 = loc - 1
 	BL check
 	LDUR X2, [FP, #-24] // load path back to X2
 	LDUR X3, [FP, #-32] // load loc back to X3
 	ADD X12, X7, XZR // possible = X7
-
-	SUBI X15, X4, #1 // width - 1
 
 if2:
 	CMPI X12, #0 // check if possible = 0 (true)
@@ -304,7 +302,7 @@ if2:
 	B.EQ if3
 
 	ADD X16, X3, X4 // temp register = loc + width
-	MOV X3, X2 // X3 holds path
+	ADD X3, X2, XZR // X3 holds path
 	ADDI X2, X16, #0 // X2 = loc + width
 	BL check
 	LDUR X2, [FP, #-24] // load path back to X2
@@ -317,9 +315,9 @@ if3:
 	CMP X14, X15 // check if loc%width = width-1 (if equal skip to next if)
 	B.EQ lastif
 
-	ADDI X15, X3, #1 // temp register = loc + 1
-	MOV X3, X2 // X3 holds path
-	ADDI X2, X15, #0 // X2 = loc + 1
+	ADDI X16, X3, #1 // temp register = loc + 1
+	ADD X3, X2, XZR // X3 holds path
+	ADDI X2, X16, #0 // X2 = loc + 1
 	BL check
 	LDUR X2, [FP, #-24] // load path back to X2
 	LDUR X3, [FP, #-32] // load loc back to X3
@@ -327,24 +325,36 @@ if3:
 
 lastif:
 	CMPI X12, #0 // check if possible = 0 (true)
-	B.NE r1dfs // branch to return 0
+	B.NE r1dfslast // branch to return 1
 
-	MOV X0, X2 // store path in X0
+	ADD X0, X2, XZR // store path in X0
 	SUBI X1, XZR, #1 // set X1 to -1
 	BL find
 	LDUR X0, [FP, #-8]
 	LDUR X1, [FP, #-16]
-	ADDI X7, X7, #1 // add 1 to X7
+	SUBI X7, X7, #1 // subtract 1 from X7
 	LSL X7, X7, #3 // X7*8
 	ADD X7, X7, X2
 	SUBI X13, XZR, #1 // constant -1
-	STUR X13, [X7, #0] // store -1 in *(path+find(path, -1)+1)
+	STUR X13, [X7, #0] // store -1 in *(path+find(path, -1)-1)
 
 rzdfs:
 	ADDI X7, XZR, #0 // return 0
 	B deallocatedfs
 
 r1dfs:
+	ADD X0, X2, XZR // store path in X0
+	SUBI X1, XZR, #1 // set X1 to -1
+	BL find
+	LDUR X0, [FP, #-8]
+	LDUR X1, [FP, #-16]
+	LSL X7, X7, #3 // X7*8
+	ADD X7, X7, X2
+	SUBI X13, XZR, #1 // constant -1
+	STUR X13, [X7, #8] // store -1 in *(path+find(path, -1)+1)
+	STUR X3, [X7, #0] // store loc in *(path+find(path, -1))
+
+r1dfslast:
 	ADDI X7, XZR, #1 // return 1
 
 deallocatedfs:
