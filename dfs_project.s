@@ -171,17 +171,21 @@ check:
 	// output:
 	// 	X7: True or False
 
-	SUBI SP, SP, #24
+	SUBI SP, SP, #40
 	STUR FP, [SP, #0]
-	ADDI FP, SP, #16
+	ADDI FP, SP, #32
 	STUR LR, [FP, #0]
 	STUR X1, [FP, #-8] // X1 is visit
+	STUR X2, [FP, #-16] // X2 is location
+	STUR X3, [FP, #-24] // X3 is path
+
 
 	ADDI X9, XZR, #0 // i = 0
 
 checkloop:
 	LDUR X10, [X1, #0] // load *(visit)
-	ADDIS X11, X10, #1 // check if value is = -1
+	ADDI X11, X10, #1 // check if value is = -1
+	CMPI X11, #0
 	B.EQ endcheck
 
 	CMP X10, X2 // check if *(visit + i) == loc
@@ -203,10 +207,12 @@ endzero:
 	ADDI X7, XZR, #0 // set X7 to 0
 
 deallocatecheck:
+	LDUR X3, [FP, #-24]
+	LDUR X2, [FP, #-16]
 	LDUR X1, [FP, #-8]
 	LDUR LR, [FP, #0]
 	LDUR FP, [SP, #0]
-	ADDI SP, SP, #24
+	ADDI SP, SP, #40
 	BR LR
 
 ////////////////////////
@@ -375,12 +381,76 @@ deallocatedfs:
 ////////////////////////
 possibleStarts:
 	// input:
-	//     	X0: Pointer to the maze array.
+	//  X0: Pointer to the maze array.
 	//	X1: Pointer to the visit array.
 	//	X2: Pointer to the path array.
 	//	X3: The starting location(place).
 	//	X4: The width of the maze.
 	// output:
 	//	X7: The number of different possible starting point.
-	// INSERT YOUR CODE HERE
+	
+	SUBI SP, SP, #48
+	STUR FP, [SP, #0]
+	ADDI FP, SP, #40
+	STUR LR, [FP, #0]
+	STUR X0, [FP, #-8] // store X0
+	STUR X1, [FP, #-16] // store X1
+	STUR X2, [FP, #-24] // store X2
+	STUR X3, [FP, #-32] // store X3
+
+	ADDI X8, XZR, #0 // count = 0
+	MUL X9, X4, X4 // width * width
+	CMP X3, X9 // 
+	B.GE retcount // check if loc >= width^2
+	UDIV X17, X3, X4 // row = loc / width
+	MUL X18, X17, X4 
+	SUB X18, X3, X18 // loc % width
+	SUBI X19, X4, #1 // width - 1
+	CMPI X17, #0
+	B.EQ checkand
+	CMP X17, X19
+	B.EQ checkand
+	CMPI X18, #0
+	B.EQ checkand
+	CMP X18, X19
+	B.NE endstarts
+
+checkand: 
+	LSL X17, X3, #3 // loc * 8
+	ADD X17, X17, X0 // maze + loc*8
+	LDUR X17, [X17, #0] // load maze[loc]
+	CMPI X17, #0
+	B.NE endstarts
+
+	SUBI X17, XZR, #1 // temp register to hold -1
+	STUR X17, [X1, #0] // *(visited) = -1
+	STUR X17, [X2, #0] // *(path) = -1
+	BL dfs
+	CMPI X7, #0
+	B.EQ endstarts
+	MOV X1, X2 // X1 = path
+	MOV X2, X4 // X2 = width
+	BL display
+	LDUR X1, [FP, #-16]
+	LDUR X2, [FP, #-24]
+	ADDI X8, X8, #1
+
+endstarts:
+	ADDI X3, X3, #1 // loc + 1
+	BL possibleStarts
+	ADD X7, X7, X8
+	B deallocatestarts
+
+retcount:
+	ADDI X7, X8, #0 // return count
+	B deallocatestarts
+
+deallocatestarts:
+	LDUR X3, [FP, #-32] 
+	LDUR X2, [FP, #-24]
+	LDUR X1, [FP, #-16]
+	LDUR X0, [FP, #-8]
+	LDUR LR, [FP, #0]
+	LDUR FP, [SP, #0]
+	ADDI SP, SP, #48
 	BR LR
