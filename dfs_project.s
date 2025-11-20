@@ -155,7 +155,6 @@ dispend:
 
 	BR LR
 
-
 ////////////////////////
 //                    //
 //       check        //
@@ -179,9 +178,6 @@ check:
 	STUR X2, [FP, #-16] // X2 is location
 	STUR X3, [FP, #-24] // X3 is path
 
-
-	ADDI X9, XZR, #0 // i = 0
-
 checkloop:
 	LDUR X10, [X1, #0] // load *(visit)
 	ADDI X11, X10, #1 // check if value is = -1
@@ -191,7 +187,6 @@ checkloop:
 	CMP X10, X2 // check if *(visit + i) == loc
 	B.EQ endzero
 
-	ADDI X9, X9, #1 // i++
 	ADDI X1, X1, #8 // increment visit by 8 to move to next address
 	B checkloop 
 
