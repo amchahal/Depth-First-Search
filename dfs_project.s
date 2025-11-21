@@ -3,15 +3,18 @@
 //       main         //
 //                    //
 ////////////////////////
+
+// Amrit Chahal and Alexandra Dinh
+
 // You can modify main function to test your own test cases.
 
     LDA X0, maze      //Init maze array
     LDA X1, visit     //Init visit array
-    LDA X3, path      //Init path array
+    LDA X2, path      //Init path array
 
-	ADDI X2, XZR, #4 // loc = 4
-	ADDI X4, XZR, #3 // width = 3
-	BL check
+	ADDI X3, XZR, #0 // loc = 4
+	ADDI X4, XZR, #5 // width = 3
+	BL possibleStarts
 	STOP
 
 
@@ -225,14 +228,18 @@ dfs:
  	// output:
 	// 	X7: True or False
 
-	SUBI SP, SP, #48
+	SUBI SP, SP, #88
 	STUR FP, [SP, #0]
-	ADDI FP, SP, #40
+	ADDI FP, SP, #80
 	STUR LR, [FP, #0]
 	STUR X0, [FP, #-8] // store X0
 	STUR X1, [FP, #-16] // store X1
 	STUR X2, [FP, #-24] // store X2
 	STUR X3, [FP, #-32] // store X3
+	STUR X13, [FP, #-40]
+	STUR X14, [FP, #-48]
+	STUR X15, [FP, #-56]
+	STUR X12, [FP, #-64]
 	
 	ADD X0, X1, XZR // set X0 to visit
 	SUBI X1, XZR, #1 // set X1 to -1
@@ -267,61 +274,76 @@ dfs:
 	ADDI X12, XZR, #0 // possible = 0
 
 	UDIV X13, X3, X4 // loc / width
+	STUR X13, [FP, #-40] // store X13
 	MUL X14, X13, X4 
 	SUB X14, X3, X14 // X14 stores remainder value
 	SUBI X15, X4, #1 // width - 1
+	STUR X14, [FP, #-48]
+	STUR X15, [FP, #-56]
 
 	CMPI X13, #0 // check if loc/width = 0 (if equal skip to next if)
 	B.EQ if1
-	
 	ADDI X16, X3, #0 // temp register to hold loc
 	ADD X3, X2, XZR // X3 holds path
 	SUB X2, X16, X4 // X2 = loc - width
+	STUR X12, [FP, #-64]
 	BL check
 	LDUR X2, [FP, #-24] // load path back to X2
 	LDUR X3, [FP, #-32] // load loc back to X3
+	LDUR X12, [FP, #-64]
 	ADD X12, X7, XZR // possible = X7
 	
 if1:	
 	CMPI X12, #0 // check if possible = 0 (true)
 	B.NE if2
+	LDUR X14, [FP, #-48]
 	CMPI X14, #0 // check if loc%width = 0 (if equal skip to next if)
 	B.EQ if2
 
 	SUBI X16, X3, #1 // temp register to hold loc - 1
 	ADD X3, X2, XZR // X3 holds path
 	ADDI X2, X16, #0 // X2 = loc - 1
+	STUR X12, [FP, #-64]
 	BL check
 	LDUR X2, [FP, #-24] // load path back to X2
 	LDUR X3, [FP, #-32] // load loc back to X3
+	LDUR X12, [FP, #-64]
 	ADD X12, X7, XZR // possible = X7
 
 if2:
 	CMPI X12, #0 // check if possible = 0 (true)
 	B.NE if3
+	LDUR X13, [FP, #-40] // load back original X13 value
+	LDUR X15, [FP, #-56]
 	CMP X13, X15 // check if loc/width = width-1 (if equal skip to next if)
 	B.EQ if3
 
 	ADD X16, X3, X4 // temp register = loc + width
 	ADD X3, X2, XZR // X3 holds path
 	ADDI X2, X16, #0 // X2 = loc + width
+	STUR X12, [FP, #-64]
 	BL check
 	LDUR X2, [FP, #-24] // load path back to X2
 	LDUR X3, [FP, #-32] // load loc back to X3
+	LDUR X12, [FP, #-64]
 	ADD X12, X7, XZR // possible = X7
 
 if3:
 	CMPI X12, #0 // check if possible = 0 (true)
 	B.NE lastif
+	LDUR X14, [FP, #-48]
+	LDUR X15, [FP, #-56]
 	CMP X14, X15 // check if loc%width = width-1 (if equal skip to next if)
 	B.EQ lastif
 
 	ADDI X16, X3, #1 // temp register = loc + 1
 	ADD X3, X2, XZR // X3 holds path
 	ADDI X2, X16, #0 // X2 = loc + 1
+	STUR X12, [FP, #-64]
 	BL check
 	LDUR X2, [FP, #-24] // load path back to X2
 	LDUR X3, [FP, #-32] // load loc back to X3
+	LDUR X12, [FP, #-64]
 	ADD X12, X7, XZR // possible = X7
 
 lastif:
@@ -359,13 +381,16 @@ r1dfslast:
 	ADDI X7, XZR, #1 // return 1
 
 deallocatedfs:
+	LDUR X15, [FP, #-56]
+	LDUR X14, [FP, #-48]
+	LDUR X13, [FP, #-40]
 	LDUR X3, [FP, #-32] 
 	LDUR X2, [FP, #-24]
 	LDUR X1, [FP, #-16]
 	LDUR X0, [FP, #-8]
 	LDUR LR, [FP, #0]
 	LDUR FP, [SP, #0]
-	ADDI SP, SP, #48
+	ADDI SP, SP, #88
 	BR LR
 
 
@@ -384,18 +409,20 @@ possibleStarts:
 	// output:
 	//	X7: The number of different possible starting point.
 	
-	SUBI SP, SP, #48
+	SUBI SP, SP, #64
 	STUR FP, [SP, #0]
-	ADDI FP, SP, #40
+	ADDI FP, SP, #56
 	STUR LR, [FP, #0]
 	STUR X0, [FP, #-8] // store X0
 	STUR X1, [FP, #-16] // store X1
 	STUR X2, [FP, #-24] // store X2
 	STUR X3, [FP, #-32] // store X3
+	STUR X7, [FP, #-40]
+	STUR X8, [FP, #-48]
 
 	ADDI X8, XZR, #0 // count = 0
 	MUL X9, X4, X4 // width * width
-	CMP X3, X9 // 
+	CMP X3, X9 
 	B.GE retcount // check if loc >= width^2
 	UDIV X17, X3, X4 // row = loc / width
 	MUL X18, X17, X4 
@@ -423,29 +450,41 @@ checkand:
 	BL dfs
 	CMPI X7, #0
 	B.EQ endstarts
+	LDUR X0, [FP, #-8] 
+	LDUR X1, [FP, #-16] 
+	LDUR X2, [FP, #-24] 
 	MOV X1, X2 // X1 = path
 	MOV X2, X4 // X2 = width
+	STUR X8, [FP, #-48]
 	BL display
+	LDUR X8, [FP, #-48]
 	LDUR X1, [FP, #-16]
 	LDUR X2, [FP, #-24]
 	ADDI X8, X8, #1
+	STUR X8, [FP, #-48]
 
 endstarts:
 	ADDI X3, X3, #1 // loc + 1
+	STUR X7, [FP, #-40]
+	STUR X8, [FP, #-48]
 	BL possibleStarts
+	LDUR X8, [FP, #-48]
 	ADD X7, X7, X8
+	STUR X7, [FP, #-40]
 	B deallocatestarts
 
 retcount:
 	ADDI X7, X8, #0 // return count
-	B deallocatestarts
+	STUR X7, [FP, #-40]
 
 deallocatestarts:
+	LDUR X8, [FP, #-48]
+	LDUR X7, [FP, #-40]
 	LDUR X3, [FP, #-32] 
 	LDUR X2, [FP, #-24]
 	LDUR X1, [FP, #-16]
 	LDUR X0, [FP, #-8]
 	LDUR LR, [FP, #0]
 	LDUR FP, [SP, #0]
-	ADDI SP, SP, #48
+	ADDI SP, SP, #64
 	BR LR
